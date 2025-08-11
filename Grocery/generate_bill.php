@@ -144,7 +144,7 @@ $result = $conn->query($sql);
                   <input type="checkbox" name="items[]" value="<?php echo $row['id']; ?>" onchange="toggleQuantity(this, <?php echo $row['id']; ?>)">
                 </td>
                 <td><?php echo htmlspecialchars($row['product_name']); ?></td>
-                <td><?php echo $row['price']; ?></td>
+                <td><?php echo number_format((float)$row['price'], 2); ?></td>
                 <td><?php echo htmlspecialchars($row['quantity']); ?></td>
                 <td>
                   <input type="number" name="quantities[<?php echo $row['id']; ?>]" id="qty_<?php echo $row['id']; ?>" value="1" min="1" disabled>

@@ -8,16 +8,41 @@ if(isset($_SESSION['admin_logged_in'])){
 
 $error = '';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+// Basic session-based throttling to mitigate brute force
+if (!isset($_SESSION['login_attempts'])) {
+    $_SESSION['login_attempts'] = 0;
+}
+if (!isset($_SESSION['last_login_attempt'])) {
+    $_SESSION['last_login_attempt'] = 0;
+}
 
-    // Validate admin credentials
-    if($email == 'admin@gmail.com' && $password == '123'){
+$lockSeconds = 2; // small delay between attempts
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if (time() - $_SESSION['last_login_attempt'] < $lockSeconds) {
+        // Artificial delay
+        usleep(300000); // 300ms
+    }
+    $_SESSION['last_login_attempt'] = time();
+
+    $email = isset($_POST['email']) ? trim(strtolower($_POST['email'])) : '';
+    $password = isset($_POST['password']) ? (string)$_POST['password'] : '';
+
+    // Stored admin credentials (in real apps, fetch from DB). Password is hashed.
+    $storedEmail = getenv('ADMIN_EMAIL') ?: 'admin@gmail.com';
+    $storedPasswordHash = getenv('ADMIN_PASSWORD_HASH') ?: password_hash('123', PASSWORD_DEFAULT);
+
+    $emailMatches = hash_equals(hash('sha256', $storedEmail), hash('sha256', $email));
+    $passwordMatches = password_verify($password, $storedPasswordHash);
+
+    if($emailMatches && $passwordMatches){
+        session_regenerate_id(true);
         $_SESSION['admin_logged_in'] = true;
+        $_SESSION['login_attempts'] = 0;
         header("Location: dashboard.php");
         exit;
     } else {
+        $_SESSION['login_attempts'] += 1;
         $error = "Invalid credentials!";
     }
 }
