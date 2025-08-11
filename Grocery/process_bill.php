@@ -8,32 +8,51 @@ if(!isset($_SESSION['admin_logged_in'])){
 require 'db.php';
 
 if($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['items'])){
-    $selectedItems = $_POST['items'];
-    $quantities = $_POST['quantities'];
+    $selectedItems = is_array($_POST['items']) ? $_POST['items'] : [];
+    $quantities = isset($_POST['quantities']) && is_array($_POST['quantities']) ? $_POST['quantities'] : [];
+
+    // Sanitize and validate item IDs
+    $itemIds = [];
+    foreach ($selectedItems as $rawId) {
+        $intId = (int)$rawId;
+        if ($intId > 0) {
+            $itemIds[] = $intId;
+        }
+    }
+
+    if (empty($itemIds)) {
+        header("Location: generate_bill.php");
+        exit;
+    }
+
+    // Build a single query for all selected items to avoid N+1 queries
+    $idList = implode(',', $itemIds); // Safe because they are integers
+    $sql = "SELECT id, product_name, price FROM grocery_items WHERE id IN ($idList)";
+    $result = $conn->query($sql);
 
     $billItems = array();
-    $totalAmount = 0;
+    $totalAmount = 0.0;
 
-    foreach($selectedItems as $itemId){
-        $stmt = $conn->prepare("SELECT * FROM grocery_items WHERE id=?");
-        $stmt->bind_param("i", $itemId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if($result->num_rows == 1){
-            $item = $result->fetch_assoc();
-            // Use entered quantity or default to 1
-            $qty = isset($quantities[$itemId]) ? (int)$quantities[$itemId] : 1;
-            $itemTotal = $item['price'] * $qty;
+    if ($result && $result->num_rows > 0) {
+        while ($item = $result->fetch_assoc()) {
+            $id = (int)$item['id'];
+            // Use entered quantity; enforce integer >= 1 and reasonable max
+            $qty = isset($quantities[$id]) ? (int)$quantities[$id] : 1;
+            if ($qty < 1) { $qty = 1; }
+            if ($qty > 100000) { $qty = 100000; }
+
+            $price = (float)$item['price'];
+            $itemTotal = $price * $qty;
             $totalAmount += $itemTotal;
             $billItems[] = array(
                 'product_name' => $item['product_name'],
-                'price' => $item['price'],
+                'price' => $price,
                 'quantity' => $qty,
                 'item_total' => $itemTotal
             );
         }
-        $stmt->close();
     }
+
     // Generate a bill number using timestamp and random digits
     $billNumber = "BILL" . time() . rand(100,999);
     $dateTime = date("Y-m-d H:i:s");

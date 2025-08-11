@@ -149,14 +149,14 @@ $bill = $_SESSION['bill'];
           <?php foreach ($bill['items'] as $item): ?>
             <tr>
               <td><?php echo htmlspecialchars($item['product_name']); ?></td>
-              <td><?php echo $item['price']; ?></td>
-              <td><?php echo $item['quantity']; ?></td>
-              <td><?php echo $item['item_total']; ?></td>
+              <td><?php echo number_format((float)$item['price'], 2); ?></td>
+              <td><?php echo (int)$item['quantity']; ?></td>
+              <td><?php echo number_format((float)$item['item_total'], 2); ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
-      <h3>Total Amount: <?php echo $bill['total_amount']; ?></h3>
+      <h3>Total Amount: <?php echo number_format((float)$bill['total_amount'], 2); ?></h3>
       <p>Thank You for Shopping with us!</p>
       <p>Store Address: 123, setty Street, Palamaner</p>
     </div>

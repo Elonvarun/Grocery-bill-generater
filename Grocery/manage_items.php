@@ -5,6 +5,10 @@ if (!isset($_SESSION['admin_logged_in'])) {
   header("Location: login.php");
   exit;
 }
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+  $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 require 'db.php';
 
 // Fetch grocery items from the database
@@ -82,6 +86,9 @@ $result = $conn->query($sql);
       bottom: 0;
       width: 100%;
     }
+    .inline-form {
+      display: inline;
+    }
   </style>
 </head>
 <body>
@@ -113,12 +120,16 @@ $result = $conn->query($sql);
             <tr>
               <td><?php echo $row['id']; ?></td>
               <td><?php echo htmlspecialchars($row['product_name']); ?></td>
-              <td><?php echo $row['price']; ?></td>
+              <td><?php echo number_format((float)$row['price'], 2); ?></td>
               <td><?php echo htmlspecialchars($row['quantity']); ?></td>
               <td><?php echo htmlspecialchars($row['brand_name']); ?></td>
               <td>
                 <a href="edit_item.php?id=<?php echo $row['id']; ?>">Edit</a> |
-                <a href="delete_item.php?id=<?php echo $row['id']; ?>" onclick="return confirm('Are you sure?');">Delete</a>
+                <form class="inline-form" method="POST" action="delete_item.php" onsubmit="return confirm('Are you sure?');">
+                  <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
+                  <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                  <button type="submit" style="background:none;border:none;color:#d9534f;cursor:pointer;">Delete</button>
+                </form>
               </td>
             </tr>
           <?php endwhile; ?>
